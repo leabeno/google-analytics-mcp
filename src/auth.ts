@@ -14,7 +14,7 @@ export interface Env {
   OAUTH_PROVIDER: OAuthHelpers;
   GOOGLE_CLIENT_ID: string;
   GOOGLE_CLIENT_SECRET: string;
-  ALLOWED_EMAIL_DOMAIN: string;
+  ALLOWED_EMAIL: string;
 }
 
 /** The grant's encrypted props. */
@@ -69,7 +69,7 @@ function consentPage(details: ConsentDescription, handle: string, domain: string
     `<p><strong>${escapeHtml(details.clientName)}</strong> wants read-only access to the Google Analytics properties ` +
       `that your Google account can see. ${origin} Access will be sent to ` +
       `<strong>${escapeHtml(details.redirectHost)}</strong>.</p>${loopback}` +
-      `<p>Next, sign in with your @${escapeHtml(domain)} Google account.</p>` +
+      `<p>Next, sign in with ${escapeHtml(domain)}.</p>` +
       `<form method="post"><input type="hidden" name="handle" value="${escapeHtml(handle)}">` +
       `<button name="decision" value="approve">Continue</button> <button name="decision" value="deny">Cancel</button>` +
       "</form>",
@@ -117,11 +117,10 @@ export function verifyIdToken(idToken: string, clientId: string, domain: string,
     throw new SignInError("Google returned an identity token that is not valid for this server.");
   }
   const email = String(claims.email ?? "").toLowerCase();
-  const expected = domain.toLowerCase();
-  if (claims.hd !== expected || !email.endsWith(`@${expected}`)) {
-    throw new SignInError(
-      `Only @${domain} Google accounts can use this server. Sign in with your @${domain} account.`,
-    );
+  const expected = domain.trim().toLowerCase();
+
+  if (claims.email_verified !== true || email !== expected) {
+    throw new SignInError("This Google account is not authorized to use this server.");
   }
   if (typeof claims.sub !== "string" || !claims.sub) {
     throw new SignInError("Google returned an identity token without a user ID.");
@@ -173,7 +172,7 @@ async function authorize(request: Request, env: Env): Promise<Response> {
     const authRequest = await oauth.parseAuthRequest(request);
     const details = await oauth.describeConsent(authRequest);
     const consent = await oauth.beginConsent(authRequest);
-    return consentPage(details, consent.handle, env.ALLOWED_EMAIL_DOMAIN, consent.headers);
+    return consentPage(details, consent.handle, env.ALLOWED_EMAIL, consent.headers);
   }
 
   const form = await request.formData();
@@ -196,7 +195,6 @@ async function authorize(request: Request, env: Env): Promise<Response> {
     scope: SCOPES.join(" "),
     access_type: "offline",
     prompt: "consent",
-    hd: env.ALLOWED_EMAIL_DOMAIN,
     state,
     code_challenge: await sha256(verifier),
     code_challenge_method: "S256",
@@ -227,7 +225,7 @@ async function callback(request: Request, env: Env): Promise<Response> {
   if (!tokens.scope?.split(" ").includes(ANALYTICS_SCOPE)) {
     throw new SignInError("Google Analytics access was not granted. Connect again, and allow access to Analytics.");
   }
-  const { sub } = verifyIdToken(tokens.id_token, env.GOOGLE_CLIENT_ID, env.ALLOWED_EMAIL_DOMAIN);
+  const { sub } = verifyIdToken(tokens.id_token, env.GOOGLE_CLIENT_ID, env.ALLOWED_EMAIL);
 
   const props: Props = {
     sub,
