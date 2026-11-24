@@ -9,7 +9,7 @@ globs = ["**/*.md"]
 fallthrough = true
 
 [vars]
-ALLOWED_EMAIL_DOMAIN = "open-contracting.org"
+ALLOWED_EMAIL = "ab.creation.illustration@gmail.com"
 
 # Created with `pnpm exec wrangler kv namespace create OAUTH_KV`.
 [[kv_namespaces]]
