@@ -11,7 +11,7 @@ fallthrough = true
 # Created with `pnpm exec wrangler kv namespace create OAUTH_KV`.
 [[kv_namespaces]]
 binding = "OAUTH_KV"
-id = "741d972110cd47848cfad5999ce7c34c"
+id = "52339ebcd30d411682d80123f1049492"
 
 [observability.logs]
 enabled = true
